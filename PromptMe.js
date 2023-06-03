@@ -1,3 +1,4 @@
+import { OPENAI_INPUT_MAX_LENGTH } from "./data.js";
 export default class PromptMeClass {
   /**
    * Summarizer class that uses OpenAI API to generate summaries
@@ -5,7 +6,7 @@ export default class PromptMeClass {
   constructor(content) {
     this.content = this.replaceNonAlphanumeric(content);
     this.maxTokens = 512;
-    this.maxLen = 7500;
+    this.maxLen = OPENAI_INPUT_MAX_LENGTH;
     this.apiKey = "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";
     this.model = "text-davinci-003";
   }
@@ -48,11 +49,8 @@ export default class PromptMeClass {
         .then((res) => res.json())
         .then((data) => (summary += data.choices[0].text.trim()))
         .catch((error) => {
-          console.log(error.message, error);
-          return {
-            error,
-            status: "error",
-          };
+          // console.log(error.message, error);
+          return "";
         });
     }
 

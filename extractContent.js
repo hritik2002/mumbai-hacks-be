@@ -59,7 +59,6 @@ export const extractContent = (filePath) => {
         status: "error",
       };
     } else {
-      console.log("Extracted content:", content);
       return {
         content,
         status: "ok",
