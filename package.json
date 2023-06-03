@@ -15,6 +15,7 @@
     "body-parser": "^1.20.2",
     "cheerio": "^1.0.0-rc.12",
     "child_process": "^1.0.2",
+    "cors": "^2.8.5",
     "docxtemplater": "^3.37.9",
     "express": "^4.18.2",
     "jsdom": "^22.1.0",

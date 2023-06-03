@@ -13,6 +13,7 @@ import { OPENAI_INPUT_MAX_LENGTH } from "./data.js";
 const app = express();
 const port = 3001;
 app.use(bodyParser.json());
+app.use(cors());
 
 app.get("/", (req, res) => {
   res.json({ data: "Healthy" });
@@ -71,11 +72,19 @@ app.post("/upload", upload.single("file"), async(req, res) => {
     }
    
     const data = await getAIData(fileContent)
-    // const data = "asd"
 
     const uniqueKey = generateUniqueKey();
 
     if(data && uniqueKey && fileContent){
+      if (fileContent.length >= OPENAI_INPUT_MAX_LENGTH) {
+        let numberOfSplits = (fileContent.length - 900) / OPENAI_INPUT_MAX_LENGTH;
+        fileContent = await getNewSummariseData(
+          fileContent,
+          "\n\nSummarize in " +
+            ((data.length) / numberOfSplits - numberOfSplits) +
+            " characters"
+        );
+      }
       getAIData(fileContent, promptArr[0], uniqueKey, 1);
     }
 
@@ -83,12 +92,12 @@ app.post("/upload", upload.single("file"), async(req, res) => {
     //   await fs.unlink(filePath);
     // }
     
-    res.send({"data": data, "uniqueKey" : uniqueKey, idx:0});
+    return res.send({"data": data, "uniqueKey" : uniqueKey, idx:0});
 
 
   } catch (err) {
     console.error("error printing....",err);
-    res.status(500).send("Error reading or saving the file.");
+    return res.status(500).send("Error reading or saving the file.");
   }
 });
 
@@ -102,7 +111,7 @@ app.post("/polling", async(req,res) => {
 
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
-      res.send({status : "processing" ,  uniqueKey : key, idx});
+      return res.send({status : "processing" ,  uniqueKey : key, idx});
     }
   });
 
@@ -119,9 +128,9 @@ app.post("/polling", async(req,res) => {
 
     try{
       const jsonData = JSON.parse(data);
-      res.send({data : jsonData ,  uniqueKey : key, idx});
+      return res.send({data : jsonData ,  uniqueKey : key, idx, status : "complete"});
     }catch{
-      res.send({data : data ,  uniqueKey : key, idx});
+      return res.send({data : data ,  uniqueKey : key, idx, status : "complete"});
     }
   });
 
@@ -172,19 +181,27 @@ const getAIData = async(content, prompt="", uniqueKey, idx) => {
     return data;
 }
 
+const getNewSummariseData = async(content, prompt) => {
+  const promptClass = new PromptMeClass(content);
+  const data = await promptClass.PromptMe(prompt);
+  return data
+}
+
 function formatArrayElements(array) {
   const output = array.join(', ').replace(/,([^,]*)$/, ' and$1');
   return output;
 }
 
 const getUpdatedPromptJson = (element) => {
-  const obj = {};
-  // console.log(element);
-  for(const e of element){
-      obj[e] = replaceElement(promptJson,e);
-      console.log("promptJson",obj[e]);
-  }
-  return obj;
+  // const obj = {};
+  // // console.log(element);
+  // for(const e of element){
+  //     obj[e] = replaceElement(promptJson,e);
+  //     console.log("promptJson",obj[e]);
+  // }
+  // return obj;
+  const replaceWith = element.join('/');
+  return replaceElement(promptJson, replaceWith);
 }
 
 function replaceElement(obj, replaceWith) {
