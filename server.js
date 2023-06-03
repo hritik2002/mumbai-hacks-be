@@ -1,5 +1,4 @@
 import express from "express";
-import { extractContent } from "./extractContent.js";
 import PromptMeClass from "./PromptMe.js";
 import bodyParser from "body-parser";
 import crawlWeb from "./crawlWeb.js";
@@ -100,6 +99,13 @@ app.post("/polling", async(req,res) => {
 
   const filePath = "results/" + filename;
   console.log(filePath);
+
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      res.send({status : "processing" ,  uniqueKey : key, idx});
+    }
+  });
+
   // return
   fs.readFile(filePath, 'utf8', (error, data) => {
     if (error) {
