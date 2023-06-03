@@ -1,0 +1,25 @@
+{
+  "name": "mumbaihacks",
+  "version": "1.0.0",
+  "description": "",
+  "main": "extract-text.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "body-parser": "^1.20.2",
+    "cheerio": "^1.0.0-rc.12",
+    "child_process": "^1.0.2",
+    "jsdom": "^22.1.0",
+    "multer": "^1.4.5-lts.1",
+    "node-scrapy": "^0.5.0",
+    "openai": "^3.2.1",
+    "re": "^0.1.4",
+    "textract": "^2.5.0"
+  }
+}
