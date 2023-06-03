@@ -1,0 +1,1 @@
+export const OPENAI_INPUT_MAX_LENGTH = 12000;

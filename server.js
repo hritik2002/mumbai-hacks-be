@@ -8,7 +8,8 @@ import fs from "fs";
 import pdfjs from "pdfjs-dist"
 import mammoth from "mammoth"
 const upload = multer({ dest: "uploads/" });
-import path from 'path'
+import path from "path";
+import { OPENAI_INPUT_MAX_LENGTH } from "./data.js";
 
 const app = express();
 const port = 3001;
@@ -261,60 +262,96 @@ const generateUniqueKey = () => {
 
 
 
-app.post("/analyze", (req, res) => {
+app.post("/analyze", async(req, res) => {
   const { urls } = req.body;
-  console.log("urls: ", urls);
 
-  let response_data = [];
-  //   const urls = [
-  //     "https://www.spotify.com/in-en/legal/end-user-agreement",
-  //     "https://www.ubuy.co.in/privacy-policy",
-  //   ];
+  let website_content = [],
+    website_summarized_content = [];
+  website_content = await Promise.all(
+    urls.map(async (url, index) => {
+      const res = await crawlWeb(url);
+      if (res.status === "ok") return res.extractedText;
+      else return "";
+    })
+  );
 
-  let result = urls;
-  urls.map(async (url, index) => {
-    crawlWeb(url)
-      .then((res) => {
-        console.log(res);
-        if (res.status === "ok") result[index] = res.extractedText;
-      })
-      .catch((error) => console.log("error: ", error));
-  });
+  website_summarized_content = await Promise.all(
+    website_content.map(async (content, index) => {
+      let promptMeObj = new PromptMeClass(content);
+      if (content.length <= OPENAI_INPUT_MAX_LENGTH) {
+        return await promptMeObj.PromptMe("\n\nTl;dr");
+      } else {
+        let numberOfSplits = content.length / OPENAI_INPUT_MAX_LENGTH;
+        return await promptMeObj.PromptMe(
+          "\n\nSummarize in " +
+            (OPENAI_INPUT_MAX_LENGTH / numberOfSplits - numberOfSplits) +
+            " characters"
+        );
+      }
+    })
+  );
 
-  console.log(result);
+  const responseData = await Promise.all(
+    website_summarized_content.map(async (summary) => {
+      let responseObject = {
+        high_risk: {
+          title: "High Risk",
+          data: [],
+          description: [],
+        },
+        medium_risk: {
+          title: "med Risk",
+          data: [],
+          description: [],
+        },
+        low_risk: {
+          title: "low Risk",
+          data: [],
+          description: [],
+        },
+      };
+      if (summary.trim().length < 5) {
+        return responseObject;
+      } else {
+        let promptMeObj = new PromptMeClass(summary);
+        let sentences =
+          await promptMeObj.PromptMe(`\n\nIdentify the key clauses which the user is agreeing to while signing up on this website.
+        Classify each clause in the type of the clause it is, and the risk involved in agreeing to the terms against the type of the clause.
+        Give the response for all clauses in the following structure.
+        "Clause Name : Clause TL;DR & involves High/Medium/Low risk"`);
 
-  const responseObject = [
-    {
-      high_risk: {
-        title: "High Risk",
-        data: ["point1", "point2"],
-      },
-      medium_risk: {
-        title: "med Risk",
-        data: ["point1", "point2"],
-      },
-      low_risk: {
-        title: "low Risk",
-        data: ["point1", "point2"],
-      },
-    },
-    {
-      high_risk: {
-        title: "High Risk",
-        data: ["point1", "point2"],
-      },
-      medium_risk: {
-        title: "med Risk",
-        data: ["point1", "point2"],
-      },
-      low_risk: {
-        title: "low Risk",
-        data: ["point1", "point2"],
-      },
-    },
-  ];
+        sentences = sentences.split("\n");
 
-  res.json({ data: responseObject });
+        sentences.map((sentence) => {
+          if (sentence.trim().length) {
+            let arr = sentence.split(": ");
+            if (!arr[0] || !arr[1]) return;
+
+            if (arr[1].toLowerCase().includes("high")) {
+              if (isNaN(arr[0].trim()[0]))
+                responseObject["high_risk"]["data"].push(arr[0]);
+              else responseObject["high_risk"]["data"].push(arr[0].substr(3));
+              responseObject["high_risk"]["description"].push(arr[1]);
+            } else if (arr[1].toLowerCase().includes("medium")) {
+              if (isNaN(arr[0].trim()[0]))
+                responseObject["medium_risk"]["data"].push(arr[0]);
+              else responseObject["medium_risk"]["data"].push(arr[0].substr(3));
+              responseObject["medium_risk"]["description"].push(arr[1]);
+            } else if (arr[1].toLowerCase().includes("low")) {
+              if (isNaN(arr[0].trim()[0]))
+                responseObject["low_risk"]["data"].push(arr[0]);
+              else responseObject["low_risk"]["data"].push(arr[0].substr(3));
+              responseObject["low_risk"]["description"].push(arr[1]);
+            }
+          }
+        });
+
+        return responseObject;
+      }
+    })
+  );
+
+  res.json({ data: responseData });
 });
 
 app.post("/promptMe", (req, res) => {
@@ -334,7 +371,6 @@ app.post("/promptMe", (req, res) => {
   return promptMeObj
     .PromptMe(prompt)
     .then((result) => {
-      console.log("result: \n", result);
       return res.json({ result, status: "ok" });
     })
     .catch((error) => {

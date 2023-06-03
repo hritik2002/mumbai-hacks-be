@@ -18,16 +18,18 @@ export default async function crawlWeb(url) {
         const text = $(element).text().trim();
         extractedText.push(text);
       });
+      let website_content = "";
 
       extractedText.forEach((text) => {
-        console.log(text);
+        // console.log(text);
+        website_content += text + " ";
       });
 
-      return { extractedText, status: "ok" };
+      return { extractedText: website_content, status: "ok" };
       // Further code for extracting text goes here
     })
     .catch((error) => {
-      console.log("Error:", error);
+      // console.log("Error:", error);
       return {
         error,
         status: "error",
