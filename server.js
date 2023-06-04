@@ -134,7 +134,10 @@ app.post("/polling", async(req,res) => {
 
     try{
       const jsonData = JSON.parse(data);
-      const favourableData = getFavourableData(jsonData);
+      let favourableData = "";
+      if(idx === 2){
+        favourableData = getFavourableData(jsonData);
+      }
 
       return res.send({data : jsonData ,  uniqueKey : key, idx, status : "complete", favourableData});
     }catch{
