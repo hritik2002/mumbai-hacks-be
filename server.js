@@ -125,7 +125,7 @@ app.post("/polling", async(req,res) => {
   fs.readFile(filePath, 'utf8', (error, data) => {
     if (error) {
       console.error('Error reading file:', error);
-      return res.status(500).send('Error reading file.');
+      return res.status(200).send({status:"processing", uniqueKey : key, idx});
     }
 
     if(!data){
