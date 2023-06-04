@@ -15,6 +15,13 @@ const app = express();
 const port = 3001;
 app.use(bodyParser.json());
 // app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Replace with your client's URL
+  res.setHeader('Access-Control-Allow-Methods', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  next();
+});
+
 
 app.get("/", (req, res) => {
   res.json({ data: "Healthy" });
