@@ -7,7 +7,7 @@ export default class PromptMeClass {
     this.content = this.replaceNonAlphanumeric(content);
     this.maxTokens = 512;
     this.maxLen = OPENAI_INPUT_MAX_LENGTH;
-    this.apiKey = "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";
+    this.apiKey = process.env.apiKey;
     this.model = "text-davinci-003";
   }
 
