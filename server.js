@@ -140,7 +140,7 @@ app.post("/polling", async(req,res) => {
     }
 
     if(!data){
-      res.status(500).send("Oops! Something went wrong. Please check the file again.");
+      return res.status(200).send({status:"processing", uniqueKey : key, idx});
     }
 
     try{
