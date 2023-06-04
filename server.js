@@ -22,6 +22,17 @@ app.use((req, res, next) => {
   next();
 });
 
+process.on("uncaughtException", (error, origin) => {
+  console.log(
+    `uncaughtException: message: ${error.message} stack: ${error?.stack}`
+  );
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.log(`uncaughtException: message: ${reason.message} `);
+});
+
+
 
 app.get("/", (req, res) => {
   res.json({ data: "Healthy" });
