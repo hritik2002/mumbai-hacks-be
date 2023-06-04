@@ -9,11 +9,12 @@ import mammoth from "mammoth"
 const upload = multer({ dest: "uploads/" });
 import path from "path";
 import { OPENAI_INPUT_MAX_LENGTH } from "./data.js";
+import { type } from "os";
 
 const app = express();
 const port = 3001;
 app.use(bodyParser.json());
-app.use(cors());
+// app.use(cors());
 
 app.get("/", (req, res) => {
   res.json({ data: "Healthy" });
@@ -21,25 +22,23 @@ app.get("/", (req, res) => {
 
 const promptArr = [
   "In the above agreement give me the result of parties involved in the following json format for party type and party name, the result should be JSON only",
-  "Give me the number of risks, the gravity of risks, number of advantages and gravity of advantages for in the following format json for [__ELEMENTS__]  each in the above legal document in the following format json for"
+  "Give me the number of risks, the gravity of risks, number of advantages and gravity of advantages for in the following format for [__ELEMENTS__] in the given data to create a single JSON where [__ELEMENTS__] are object keys of the unified JSON in the one single object response"
 ];
 
 const stringifyJsonprompt = JSON.stringify({"parties_in_doc":{"party1":{"name":"{{party1name}}","type":"{{party1type}}"},"party2":{"name":"{{party2name}}","type":"{{party2type}}"},"partyN":{"name":"{{partyNname}}","type":"{{partyNtype}}"}}});
 promptArr[0] += stringifyJsonprompt;
 
-const promptJson = {
- 
-		"numberOfRisks": "X no of risks of __ELEMENT__ ",
+const promptJson =  {
+    "numberOfRisks": "X number of risks of  ",
 		"gravityOfRisks": "high | medium | low",
 		"risks": {
 			"riskX": "details of risk of __ELEMENT__ in the string",
 		},
-		"numberOfAdvantages": "Y no of advantage __ELEMENT__",
+		"numberOfAdvantages": "Y number of advantage __ELEMENT__",
 		"gravityOfAdvantages": "high | medium | low",
 		"Advantages": {
 			"AdvantageY": "details of Advantage of __ELEMENT__ in the string"
 		}
-
 }
 
 app.post("/upload", upload.single("file"), async(req, res) => {
@@ -128,13 +127,42 @@ app.post("/polling", async(req,res) => {
 
     try{
       const jsonData = JSON.parse(data);
-      return res.send({data : jsonData ,  uniqueKey : key, idx, status : "complete"});
+      const favourableData = getFavourableData(jsonData);
+
+      return res.send({data : jsonData ,  uniqueKey : key, idx, status : "complete", favourableData});
     }catch{
-      return res.send({data : data ,  uniqueKey : key, idx, status : "complete"});
+      return res.send({data : data ,  uniqueKey : key, idx, status : "complete", favourableData : ""});
     }
   });
 
 });
+
+const getFavourableData = (data) => {
+  const favorableObj={};
+  for (const key in data) {
+   
+    if (data.hasOwnProperty(key)) {
+      const obj = data[key];
+      const numberOfRisks = parseInt(obj.numberOfRisks.split(' ')[0]);
+      const numberOfAdvantages = parseInt(obj.numberOfAdvantages.split(' ')[0]);
+      favorableObj[key] = numberOfAdvantages - numberOfRisks
+    }
+  }
+  let maxKey = null;
+  let maxValue = Number.NEGATIVE_INFINITY;
+
+  for (const key in favorableObj) {
+    if (favorableObj.hasOwnProperty(key)) {
+      const value = favorableObj[key];
+      if (value > maxValue) {
+        maxValue = value;
+        maxKey = key;
+      }
+    }
+  }
+
+  return maxKey;
+}
 
 const getAIData = async(content, prompt="", uniqueKey, idx) => {
   console.log("prompt", prompt)
@@ -193,7 +221,7 @@ function formatArrayElements(array) {
 }
 
 const getUpdatedPromptJson = (element) => {
-  // const obj = {};
+  const obj = {};
   // // console.log(element);
   // for(const e of element){
   //     obj[e] = replaceElement(promptJson,e);
@@ -201,7 +229,9 @@ const getUpdatedPromptJson = (element) => {
   // }
   // return obj;
   const replaceWith = element.join('/');
-  return replaceElement(promptJson, replaceWith);
+  const updatedJson = replaceElement(promptJson, replaceWith);
+  obj[replaceWith] = updatedJson;
+  return obj;
 }
 
 function replaceElement(obj, replaceWith) {
